@@ -195,3 +195,49 @@ def test_people_who_share_a_name_are_kept_apart():
     ]
     # Each is a manager in their own right, not merged into one Ann Lee.
     assert [entry.manager.employee_id for entry in preview.managers] == ["DIV-1", "DIV-2"]
+
+
+def test_headers_may_be_capitalised_or_padded():
+    """
+    Real exports write Employee_ID as often as employee_id, and a stray space
+    after a comma is common. Header names are normalized the same way values
+    are, and the normalized names become the keys the rows are read by. Checking
+    the tidy form but reading by the raw form would let the file pass the header
+    check and then make every row look broken.
+    """
+    preview = analyze_csv(
+        b"Employee_ID , Employee_Name,EMAIL,Manager_ID,manager_email , Department\n"
+        b"DIV-1,Ann,ANN@x.com,,,Engineering\n"
+    )
+
+    assert preview.accepted_count == 1
+    assert preview.errors == []
+    assert preview.employees[0].employee_id == "DIV-1"
+    assert preview.employees[0].email == "ann@x.com"
+
+
+def test_a_repeated_column_name_is_refused_rather_than_guessed():
+    """One of the two columns would silently win and the user would never know
+    which, so the file is refused instead."""
+    with pytest.raises(InvalidHRISFile) as caught:
+        analyze_csv(
+            b"employee_id,employee_id,email,employee_name,manager_id,manager_email,department\n"
+            b"DIV-1,DIV-2,a@x.com,Ann,,,Engineering\n"
+        )
+
+    assert "more than one column called employee_id" in str(caught.value)
+
+
+def test_row_numbers_follow_the_lines_the_user_can_see():
+    """
+    A quoted value containing a line break is one row spread over two lines.
+    Row numbers are the whole mechanism for finding a problem in the file, so
+    they count lines, not rows: Bob is on line 4 even though he is the second
+    employee.
+    """
+    preview = analyze_csv(
+        HEADER + b'DIV-1,"Ann\nLee",ann@x.com,,,Engineering\n' + b"DIV-2,Bob,,,,Engineering\n"
+    )
+
+    assert preview.employees[0].employee_name == "Ann\nLee"
+    assert [error.source_row for error in preview.errors] == [4]

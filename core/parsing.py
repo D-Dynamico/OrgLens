@@ -97,7 +97,11 @@ def read_rows(text: str) -> tuple[list[RawRow], list[RowError]]:
     # header can fail the same way, so both reads sit inside the guard.
     try:
         fieldnames = reader.fieldnames
-        parsed_rows = list(enumerate(reader))
+        # reader.line_num is the PHYSICAL line the row ended on, which is what
+        # the user sees in their editor. A plain row counter drifts as soon as a
+        # quoted value contains a line break, and then every error afterwards
+        # points at the wrong line.
+        parsed_rows = [(reader.line_num, values) for values in reader]
     except csv.Error as problem:
         raise InvalidHRISFile(
             "This file could not be read as a CSV. It may be missing line "
@@ -107,20 +111,44 @@ def read_rows(text: str) -> tuple[list[RawRow], list[RowError]]:
     if fieldnames is None:
         raise InvalidHRISFile("The uploaded file is empty.")
 
+    # Header names are normalized the same way values are, because real exports
+    # arrive with "Employee_ID" or a stray leading space just as often as with
+    # the tidy lowercase form. The normalized names then become the keys the
+    # rest of this function reads by. Checking the tidy form but reading by the
+    # raw form is the subtle version of this bug: the file passes the header
+    # check and then every single row looks broken.
     headers = [(name or "").strip().lower() for name in fieldnames]
+
     missing = [column for column in REQUIRED_COLUMNS if column not in headers]
     if missing:
         raise InvalidHRISFile(
             "This file does not look like an HRIS export. It is missing these "
-            "columns: " + ", ".join(missing) + "."
+            "columns: " + ", ".join(missing) + ". If the file uses semicolons "
+            "or tabs to separate values, re-save it as a comma separated CSV."
+        )
+
+    # Two columns with the same name means one silently wins, and the user would
+    # never know which. Better to refuse than to guess.
+    repeated = sorted({name for name in headers if headers.count(name) > 1})
+    if repeated:
+        raise InvalidHRISFile(
+            "This file has more than one column called "
+            + ", ".join(repeated)
+            + ". Remove the duplicate column so it is clear which one to use."
         )
 
     rows: list[RawRow] = []
     errors: list[RowError] = []
 
-    for offset, values in parsed_rows:
-        # Header is line 1, so the first data row is line 2.
-        source_row = offset + 2
+    for source_row, raw_values in parsed_rows:
+        # Re-key each row by the normalized header names, so "Employee_ID" and
+        # " employee_id " both read as employee_id.
+        values = {
+            column: raw_values[original]
+            for column, original in zip(headers, fieldnames)
+        }
+        if _EXTRA_COLUMNS in raw_values:
+            values[_EXTRA_COLUMNS] = raw_values[_EXTRA_COLUMNS]
 
         if _EXTRA_COLUMNS in values:
             errors.append(
