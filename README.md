@@ -38,7 +38,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-34 tests, no browser and no Django test client. Every test hands raw bytes to
+36 tests, no browser and no Django test client. Every test hands raw bytes to
 `analyze_csv` and reads dataclasses back, which is what proves the parsing and
 hierarchy logic is genuinely independent of the web layer. The suite runs with
 Django installed but never imports it.
