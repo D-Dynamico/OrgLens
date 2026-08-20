@@ -89,10 +89,25 @@ def read_rows(text: str) -> tuple[list[RawRow], list[RowError]]:
         restval=_MISSING_CELL,
     )
 
-    if reader.fieldnames is None:
+    # csv.Error covers problems the reader cannot recover from at all, the most
+    # likely being a single field over its 128 KB limit. That happens when a
+    # file has no line breaks, so the reader treats the whole export as one
+    # enormous row. Without this the request dies with a traceback, and the
+    # brief is explicit that a malformed upload must never do that. Reading the
+    # header can fail the same way, so both reads sit inside the guard.
+    try:
+        fieldnames = reader.fieldnames
+        parsed_rows = list(enumerate(reader))
+    except csv.Error as problem:
+        raise InvalidHRISFile(
+            "This file could not be read as a CSV. It may be missing line "
+            f"breaks, or a single value may be extremely long ({problem})."
+        ) from None
+
+    if fieldnames is None:
         raise InvalidHRISFile("The uploaded file is empty.")
 
-    headers = [(name or "").strip().lower() for name in reader.fieldnames]
+    headers = [(name or "").strip().lower() for name in fieldnames]
     missing = [column for column in REQUIRED_COLUMNS if column not in headers]
     if missing:
         raise InvalidHRISFile(
@@ -103,7 +118,7 @@ def read_rows(text: str) -> tuple[list[RawRow], list[RowError]]:
     rows: list[RawRow] = []
     errors: list[RowError] = []
 
-    for offset, values in enumerate(reader):
+    for offset, values in parsed_rows:
         # Header is line 1, so the first data row is line 2.
         source_row = offset + 2
 

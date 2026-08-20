@@ -141,6 +141,7 @@ def test_errors_are_listed_in_file_order():
         ("employee_id,email\nDIV-1,a@x.com\n".encode("utf-16"), "UTF-8"),
         (b"name,age\nAnn,30\n", "does not look like an HRIS export"),
         (HEADER, "no employee rows"),
+        # and gives up. Without a guard this is a traceback, not a message.
     ],
 )
 def test_unusable_files_raise_a_readable_message(raw, expected):
@@ -150,3 +151,23 @@ def test_unusable_files_raise_a_readable_message(raw, expected):
         analyze_csv(raw)
 
     assert expected in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        # No line breaks anywhere, so the reader sees the whole export as one
+        # field and gives up while reading the header.
+        b"employee_id,employee_name,email,manager_id,manager_email,department," + b"x" * 200_000,
+        # A single value past the reader's 128 KB field limit, hit mid-file.
+        HEADER + b"DIV-1," + b"x" * 200_000 + b",a@x.com,,,Engineering\n",
+    ],
+    ids=["no-line-breaks", "oversized-field"],
+)
+def test_a_file_the_csv_reader_cannot_read_gives_a_message_not_a_traceback(raw):
+    """The brief is explicit that a malformed upload never shows a stack trace,
+    and csv.Error is the one failure that escapes the row-level checks."""
+    with pytest.raises(InvalidHRISFile) as caught:
+        analyze_csv(raw)
+
+    assert "could not be read as a CSV" in str(caught.value)
