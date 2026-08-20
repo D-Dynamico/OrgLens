@@ -124,9 +124,10 @@ Cycles:
 
 ## Time spent
 
-About five hours, roughly: an hour on setup and the data shapes, two hours on
-parsing and the hierarchy rules, an hour on the web layer, and an hour on tests
-and documentation.
+About 50 minutes, working with an AI assistant one reviewed slice at a time:
+setup and data shapes, parsing, hierarchy, the entry point, the web layer, then
+tests and documentation. Deciding what the rules should be took longer than
+writing them did, which is the part worth asking me about.
 
 ## AI tools used
 
