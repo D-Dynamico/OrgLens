@@ -1,1 +1,22 @@
-<p>placeholder</p>
+{% extends "preview/base.html" %}
+
+{% block content %}
+  <p>Upload an HRIS CSV export to see what would be imported, before anything is written anywhere.</p>
+
+  {% if error %}
+    {# The only messages that reach here are InvalidHRISFile messages, which are written for a non-engineer. #}
+    <p class="problem"><strong>{{ error }}</strong></p>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <p><input type="file" name="hris_file" accept=".csv,text/csv" required></p>
+    <p><button type="submit">Preview this file</button></p>
+  </form>
+
+  <p class="note">
+    The file needs these columns, in any order:
+    employee_id, employee_name, email, manager_id, manager_email, department.
+    Nothing is saved. The file is read, summarised and discarded.
+  </p>
+{% endblock %}

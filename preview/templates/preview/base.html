@@ -1,0 +1,23 @@
+{% comment %}
+Deliberately plain. The brief asks for clear HTML, not a designed page, and
+anything fancier is time not spent on the parsing rules.
+{% endcomment %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}OrgLens{% endblock %}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; }
+    th, td { border: 1px solid #ccc; padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f4f4f4; }
+    .problem { background: #fff4f4; }
+    .note { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>OrgLens</h1>
+  {% block content %}{% endblock %}
+</body>
+</html>

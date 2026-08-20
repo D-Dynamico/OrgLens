@@ -1,0 +1,87 @@
+{% extends "preview/base.html" %}
+{% block title %}Import preview - OrgLens{% endblock %}
+
+{% block content %}
+  <h2>Import preview for {{ filename }}</h2>
+
+  <p>
+    <strong>{{ preview.total_rows }}</strong> row{{ preview.total_rows|pluralize }} read.
+    <strong>{{ preview.accepted_count }}</strong> would be imported.
+    <strong>{{ preview.error_count }}</strong> problem{{ preview.error_count|pluralize }} found.
+  </p>
+
+  {% if preview.errors %}
+    <h3>Problems ({{ preview.error_count }})</h3>
+    {% comment %}
+      Row numbers match the line numbers in the uploaded file, header included,
+      so the user can open the CSV and go straight there.
+    {% endcomment %}
+    <table>
+      <tr><th>Row</th><th>Problem</th><th>What it means</th></tr>
+      {% for error in preview.errors %}
+        <tr class="problem">
+          <td>{{ error.source_row }}</td>
+          <td>{{ error.kind }}</td>
+          <td>{{ error.message }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No problems found.</p>
+  {% endif %}
+
+  <h3>Top of the org ({{ preview.roots|length }})</h3>
+  {% if preview.roots %}
+    <p class="note">People with no manager listed. Someone whose manager could not be resolved is NOT here: we could not place them, which is not the same as them being at the top.</p>
+    <ul>
+      {% for employee in preview.roots %}
+        <li>{{ employee.employee_name }} ({{ employee.employee_id }}) - {{ employee.department }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>Nobody in this file is missing a manager, which usually means a row is wrong.</p>
+  {% endif %}
+
+  {% if preview.cycle_members %}
+    <h3>Reporting loops ({{ preview.cycle_members|length }} people)</h3>
+    <p class="note">These people report to each other in a circle, so this part of the org chart has no top. Only people ON the loop are listed. Anyone who reports into it is fine.</p>
+    <ul>
+      {% for employee in preview.cycle_members %}
+        <li>{{ employee.employee_name }} ({{ employee.employee_id }}) - {{ employee.department }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <h3>Managers ({{ preview.managers|length }})</h3>
+  {% if preview.managers %}
+    <table>
+      <tr><th>Manager</th><th>Employee ID</th><th>Department</th><th>Direct reports</th></tr>
+      {% for entry in preview.managers %}
+        <tr>
+          <td>{{ entry.manager.employee_name }}</td>
+          <td>{{ entry.manager.employee_id }}</td>
+          <td>{{ entry.manager.department }}</td>
+          <td>{{ entry.direct_reports }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No reporting relationships could be resolved.</p>
+  {% endif %}
+
+  <h3>Everyone who would be imported ({{ preview.accepted_count }})</h3>
+  <table>
+    <tr><th>Row</th><th>Employee ID</th><th>Name</th><th>Email</th><th>Department</th></tr>
+    {% for employee in preview.employees %}
+      <tr>
+        <td>{{ employee.source_row }}</td>
+        <td>{{ employee.employee_id }}</td>
+        <td>{{ employee.employee_name }}</td>
+        <td>{{ employee.email }}</td>
+        <td>{{ employee.department }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  <p><a href="{% url 'upload' %}">Preview another file</a></p>
+{% endblock %}
