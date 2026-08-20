@@ -171,3 +171,27 @@ def test_a_file_the_csv_reader_cannot_read_gives_a_message_not_a_traceback(raw):
         analyze_csv(raw)
 
     assert "could not be read as a CSV" in str(caught.value)
+
+
+def test_people_who_share_a_name_are_kept_apart():
+    """
+    Two real people can genuinely share a name. Identity is employee_id and
+    email, never the name, so all three of these import and stay distinct. The
+    result page prints the id beside every name for exactly this reason.
+    """
+    preview = analyze_csv(
+        HEADER
+        + b"DIV-1,Ann Lee,ann.lee@x.com,,,Engineering\n"
+        + b"DIV-2,Ann Lee,a.lee@x.com,DIV-1,,Engineering\n"
+        + b"DIV-3,Ann Lee,annlee@x.com,DIV-2,,Engineering\n"
+    )
+
+    assert preview.accepted_count == 3
+    assert preview.errors == []
+    assert [employee.employee_id for employee in preview.employees] == [
+        "DIV-1",
+        "DIV-2",
+        "DIV-3",
+    ]
+    # Each is a manager in their own right, not merged into one Ann Lee.
+    assert [entry.manager.employee_id for entry in preview.managers] == ["DIV-1", "DIV-2"]

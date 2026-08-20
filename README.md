@@ -38,7 +38,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-36 tests, no browser and no Django test client. Every test hands raw bytes to
+37 tests, no browser and no Django test client. Every test hands raw bytes to
 `analyze_csv` and reads dataclasses back, which is what proves the parsing and
 hierarchy logic is genuinely independent of the web layer. The suite runs with
 Django installed but never imports it.
@@ -99,6 +99,9 @@ Cycles:
   system. Emails are case-insensitive.
 - A blank `employee_name` is a data quality note, not a reason to refuse to
   import someone. Only id and email are identity.
+- Two people may genuinely share a name, so duplicate names are expected and
+  are not an error. They stay separate people, and the page prints the employee
+  id beside every name so a reader can tell them apart.
 - A manager reference pointing at a row that was rejected reads as "manager not
   found", because that person is not being imported.
 - Reporting loops are reported, not repaired. Deciding who really manages whom
