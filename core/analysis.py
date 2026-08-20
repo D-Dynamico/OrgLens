@@ -8,8 +8,8 @@ keeps the pipeline testable by handing it bytes.
 
 from .hierarchy import (
     build_lookups,
-    count_direct_reports,
     find_cycle_members,
+    group_reports_by_manager,
     resolve_managers,
 )
 from .parsing import parse
@@ -29,7 +29,7 @@ def analyze_csv(raw: bytes) -> ImportPreview:
     lookups = build_lookups(employees)
     resolution = resolve_managers(employees, lookups)
     cycle_ids = find_cycle_members(resolution.manager_of)
-    managers = count_direct_reports(resolution.manager_of, lookups)
+    managers = group_reports_by_manager(resolution.manager_of, lookups)
 
     # One list, in file order, so the user reads problems against the file in
     # front of them rather than grouped by which stage happened to find them.

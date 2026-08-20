@@ -47,11 +47,18 @@ class RowError:
 
 
 @dataclass(frozen=True)
-class ManagerCount:
-    """A manager and how many people resolved to them."""
+class ManagerTeam:
+    """A manager and the people who resolved to them."""
 
     manager: Employee
-    direct_reports: int
+    # The people themselves, not just a tally. Someone checking an import needs
+    # to see WHO ended up under a manager, because a plausible looking count can
+    # still be the wrong five people.
+    reports: list[Employee]
+
+    @property
+    def direct_reports(self) -> int:
+        return len(self.reports)
 
 
 @dataclass(frozen=True)
@@ -62,7 +69,7 @@ class ImportPreview:
     employees: list[Employee] = field(default_factory=list)
     errors: list[RowError] = field(default_factory=list)
     roots: list[Employee] = field(default_factory=list)
-    managers: list[ManagerCount] = field(default_factory=list)
+    managers: list[ManagerTeam] = field(default_factory=list)
     cycle_members: list[Employee] = field(default_factory=list)
 
     @property

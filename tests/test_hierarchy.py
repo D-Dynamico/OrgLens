@@ -162,3 +162,39 @@ def test_a_long_manager_chain_does_not_hit_the_recursion_limit():
 
     assert preview.accepted_count == depth + 1
     assert len(preview.cycle_members) == depth + 1
+
+
+def test_each_manager_lists_the_people_who_report_to_them():
+    """
+    The preview shows who is under a manager, not only how many. A count of two
+    looks correct even when it is the wrong two people, and checking that is the
+    whole point of the page.
+    """
+    preview = analyze_csv(
+        HEADER
+        + b"BOSS,Bea,bea@x.com,,,Executive\n"
+        + b"E2,Zoe,zoe@x.com,BOSS,,Engineering\n"
+        + b"E1,Ada,ada@x.com,BOSS,,Engineering\n"
+        + b"E3,Cid,cid@x.com,E1,,Engineering\n"
+    )
+
+    teams = {entry.manager.employee_id: entry for entry in preview.managers}
+
+    # Sorted by name, so the same file always renders the same page.
+    assert [person.employee_id for person in teams["BOSS"].reports] == ["E1", "E2"]
+    assert teams["BOSS"].direct_reports == 2
+    assert [person.employee_id for person in teams["E1"].reports] == ["E3"]
+
+
+def test_a_manager_error_keeps_the_person_out_of_the_named_team():
+    """Trap rule 2 again, now visible in the team list and not just the count."""
+    preview = analyze_csv(
+        HEADER
+        + b"BOSS,Bea,bea@x.com,,,Executive\n"
+        + b"OTHER,Oli,oli@x.com,,,Executive\n"
+        + b"E1,Ada,ada@x.com,BOSS,oli@x.com,Engineering\n"
+    )
+
+    assert kinds(preview) == ["manager_conflict"]
+    # Ada is in nobody's team, not quietly placed under one of the two.
+    assert preview.managers == []

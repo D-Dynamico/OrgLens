@@ -8,7 +8,7 @@ usable id or email, so it can neither be a manager nor look one up.
 from collections import defaultdict
 from dataclasses import dataclass
 
-from .types import Employee, ManagerCount, RowError
+from .types import Employee, ManagerTeam, RowError
 
 
 class Lookups:
@@ -201,24 +201,32 @@ def find_cycle_members(manager_of: dict[str, str]) -> set[str]:
     return cycle_members
 
 
-def count_direct_reports(manager_of: dict[str, str], lookups: Lookups) -> list[ManagerCount]:
+def group_reports_by_manager(manager_of: dict[str, str], lookups: Lookups) -> list[ManagerTeam]:
     """
-    Count how many people resolved to each manager.
+    Gather the people who resolved to each manager.
+
+    Collecting the reports themselves rather than a tally costs the same single
+    pass and answers the question a person checking an import actually has: not
+    "how many" but "who". A count of five looks fine even when it is the wrong
+    five people.
 
     Only people who actually manage someone appear. Listing every employee with
-    a count of zero would bury the six real managers in a list of 25 names.
+    an empty team would bury the real managers in a list of names.
 
-    Sorted by count, largest first, then by name so the order is stable between
-    runs of the same file. Stable ordering matters more than it sounds: a user
-    comparing two previews should not see rows move for no reason.
+    Sorted by team size, largest first, then by name, so the order is stable
+    between runs of the same file. Stable ordering matters more than it sounds:
+    a user comparing two previews should not see rows move for no reason.
     """
-    counts: dict[str, int] = defaultdict(int)
-    for manager_id in manager_of.values():
-        counts[manager_id] += 1
+    teams: dict[str, list[Employee]] = defaultdict(list)
+    for employee_id, manager_id in manager_of.items():
+        teams[manager_id].append(lookups.by_id[employee_id])
 
     managers = [
-        ManagerCount(manager=lookups.by_id[manager_id], direct_reports=count)
-        for manager_id, count in counts.items()
+        ManagerTeam(
+            manager=lookups.by_id[manager_id],
+            reports=sorted(reports, key=lambda person: (person.employee_name, person.employee_id)),
+        )
+        for manager_id, reports in teams.items()
     ]
     managers.sort(key=lambda entry: (-entry.direct_reports, entry.manager.employee_name))
     return managers

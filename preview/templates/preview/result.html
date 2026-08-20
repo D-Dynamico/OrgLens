@@ -55,13 +55,22 @@
   <h3>Managers ({{ preview.managers|length }})</h3>
   {% if preview.managers %}
     <table>
-      <tr><th>Manager</th><th>Employee ID</th><th>Department</th><th>Direct reports</th></tr>
+      <tr><th>Manager</th><th>Department</th><th>Reports</th><th>Who reports to them</th></tr>
       {% for entry in preview.managers %}
         <tr>
-          <td>{{ entry.manager.employee_name }}</td>
-          <td>{{ entry.manager.employee_id }}</td>
+          <td>{{ entry.manager.employee_name }}<br><span class="note">{{ entry.manager.employee_id }}</span></td>
           <td>{{ entry.manager.department }}</td>
           <td>{{ entry.direct_reports }}</td>
+          {% comment %}
+            The people, not just the tally. A count of five looks correct even
+            when it is the wrong five, and this page exists to be checked.
+            Each name carries its id because two colleagues can share a name.
+          {% endcomment %}
+          <td>
+            {% for person in entry.reports %}
+              {{ person.employee_name }} <span class="note">({{ person.employee_id }})</span>{% if not forloop.last %}<br>{% endif %}
+            {% endfor %}
+          </td>
         </tr>
       {% endfor %}
     </table>

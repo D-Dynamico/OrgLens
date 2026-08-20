@@ -38,7 +38,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-40 tests, no browser and no Django test client. Every test hands raw bytes to
+42 tests, no browser and no Django test client. Every test hands raw bytes to
 `analyze_csv` and reads dataclasses back, which is what proves the parsing and
 hierarchy logic is genuinely independent of the web layer. The suite runs with
 Django installed but never imports it.
@@ -116,6 +116,8 @@ Cycles:
   way to link someone to a previous one.
 - Nothing is exported. A user who wants to send the problem list to a client has
   to copy it off the page.
+- Every manager's full team is listed inline. That reads well for a normal
+  export but would be a very long page for one with thousands of managers.
 - Only the first problem per row is reported. A row that duplicates both an id
   and an email is listed once, under the id.
 - No authentication, so anyone who can reach the server can upload. Fine for a
